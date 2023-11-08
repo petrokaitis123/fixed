@@ -7,44 +7,52 @@ import com.qa.application.models.inspection.Inspection;
 import com.qa.application.models.inspection.repository.InspectionRepository;
 import com.qa.application.models.product.Product;
 import com.qa.application.models.product.repository.ProductRepository;
+import com.qa.application.service.InspectionService;
 import jakarta.validation.Valid;
+import lombok.AccessLevel;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@EnableWebSecurity
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 @RequestMapping("/api")
 public class InspectionController {
 
-    @Autowired
-    ProductRepository productRepository;
-    @Autowired
-    InspectionRepository inspectionRepository;
+    InspectionService inspectionService;
 
 
     @PostMapping("/inspections/add/{id}")
     @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN')")
-    ResponseEntity<MessageResponse> addInspection(@PathVariable Integer id, @RequestBody @Valid Inspection inspection) {
-        Product product = productRepository.findProductById(id)
-                .orElseThrow(() -> new ProductNotFoundException(id));
-        inspection.setProduct(product);
-        inspectionRepository.save(inspection);
-        return ResponseEntity.ok(new MessageResponse("Inspection have been successfully added."));
+    void addInspection(@PathVariable Integer id, @RequestBody @Valid Inspection inspection) {
+        inspectionService.addInspection(id,inspection);
     }
 
     @GetMapping("/inspections/{id}")
     @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN')")
-    ResponseEntity<List<Inspection>> getInspectionsByProductId(@PathVariable Integer id) {
-        if (!inspectionRepository.existsById(id)) {
-            throw new InspectionNotFoundException(id);
-        }
-        return ResponseEntity.ok(inspectionRepository.findByProductId(id));
+    List<Inspection> findAllInspections(@PathVariable Integer id){
+        return inspectionService.findAllInspectionsByProductId(id);
     }
+
+    @PutMapping("/inspections/update/{id}")
+    @PreAuthorize("hasRole('MODERATOR') or hasRole('ADMIN')")
+    void updateInspection(@PathVariable Integer id, @RequestBody Inspection inspection){
+        inspectionService.updateInspection(id, inspection);
+    }
+
+    @DeleteMapping
+    @PreAuthorize("hasRole('MODERATOR') or hasRole('ADMIN')")
+    void deleteInspection(@PathVariable Integer id) {
+        inspectionService.deleteInspection(id);
+    }
+
 
 }

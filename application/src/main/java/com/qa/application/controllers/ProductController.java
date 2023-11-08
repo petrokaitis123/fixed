@@ -5,7 +5,13 @@ import com.qa.application.exceptions.product.ProductNotFoundException;
 import com.qa.application.models.product.Product;
 import com.qa.application.models.product.repository.ProductRepository;
 import com.qa.application.security.services.UserDetailsImpl;
+import com.qa.application.service.ProductService;
+import com.qa.application.service.impl.ProductServiceImpl;
 import jakarta.validation.Valid;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.experimental.FieldDefaults;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,64 +21,51 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 
-@CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
-@EnableWebSecurity
-@RequestMapping("/api")
+@RequiredArgsConstructor
+@FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
+@RequestMapping("/api/products")
 public class ProductController {
 
-    @Autowired
-    ProductRepository productRepository;
+    ProductService productService;
 
-UserDetailsImpl userDetails;
-    //show all products
-    @GetMapping("/products")
+    @GetMapping
     @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN')")
-    public List<Product> getAllProducts() {
-        List<Product> products = new ArrayList<>();
-        productRepository.findAll()
-                .forEach(p -> products.add(p));
-
-        return products;
+    @ResponseBody
+    public List<Product> getAll() {
+       return productService.getAllProducts();
     }
 
-    //show one product by id
-    @GetMapping("/products/{id}")
+
+    @GetMapping("/{id}")
     @PreAuthorize("hasRole('USER') or hasRole('MODERATOR') or hasRole('ADMIN')")
+    @ResponseBody
     public Product getProductById(@PathVariable Integer id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new ProductNotFoundException(id));
+        return productService.getProductById(id);
+
 
     }
 
-    //add product
+
     @PostMapping("/products")
     @PreAuthorize("hasRole('MODERATOR') or hasRole('ADMIN')")
-    ResponseEntity<MessageResponse> addProduct(@RequestBody @Valid Product product) {
-        productRepository.save(product);
-        return ResponseEntity.ok(new MessageResponse("Product have been successfully added!"));
+    @ResponseBody
+    public void addProduct(@RequestBody @Valid Product product) {
+       productService.addProduct(product);
     }
 
-    //update product
+
     @PutMapping("/product/{id}")
     @PreAuthorize("hasRole('MODERATOR') or hasRole('ADMIN')")
-    Product updateProduct(@RequestBody Product newProduct, @PathVariable Integer id) {
-        return productRepository.findById(id)
-                .map(product -> {
-                    product.setName(newProduct.getName());
-                    product.setDescription(newProduct.getDescription());
-                    return productRepository.save(product);
-                }).orElseThrow(() -> new ProductNotFoundException(id));
+    @ResponseBody
+    public Product updateProduct(@RequestBody Product newProduct, @PathVariable Integer id) {
+       return productService.updateProduct(id,newProduct);
     }
     //delete product
     @DeleteMapping("/product/{id}")
     @PreAuthorize("hasRole('MODERATOR') or hasRole('ADMIN')")
-    @ResponseBody
-    ResponseEntity<MessageResponse> deleteUser(@PathVariable Integer id) {
-        if(!productRepository.existsById(id)) {
-            throw new ProductNotFoundException(id);
-        }
-        productRepository.deleteById(id);
-        return ResponseEntity.ok(new MessageResponse("User with id " + id + " has been deleted successfuly"));
+    public void deleteUser(@PathVariable Integer id) {
+        productService.deleteProduct(id);
     }
+
 }
